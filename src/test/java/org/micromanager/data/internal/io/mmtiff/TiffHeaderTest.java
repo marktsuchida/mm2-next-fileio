@@ -17,7 +17,7 @@ import java.nio.file.StandardOpenOption;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class StandardTiffReaderTest {
+public class TiffHeaderTest {
    TemporaryDirectory tempDir_;
    Path tempPath_;
 
@@ -37,7 +37,7 @@ public class StandardTiffReaderTest {
       Path tif = tempPath_.resolve("empty.tif");
       Files.createFile(tif);
       try (FileChannel chan = FileChannel.open(tif, StandardOpenOption.READ)) {
-         assertThrows(TiffFormatException.class, () -> StandardTiffReader.create(chan));
+         assertThrows(TiffFormatException.class, () -> TiffHeader.read(chan));
       }
    }
 
@@ -131,12 +131,12 @@ public class StandardTiffReaderTest {
       }
 
       try (FileChannel chan = FileChannel.open(tif, StandardOpenOption.READ)) {
-         StandardTiffReader r = StandardTiffReader.create(chan);
-         assertEquals(42, r.getTiffMagic());
+         TiffHeader header = TiffHeader.read(chan);
+         assertEquals(42, header.getTiffMagic());
          assertEquals(byteOrder.equals("MM") ?
             ByteOrder.BIG_ENDIAN: ByteOrder.LITTLE_ENDIAN,
-            r.getTiffByteOrder());
-         TiffIFD ifd = r.readFirstIFD();
+            header.getTiffByteOrder());
+         TiffIFD ifd = header.readFirstIFD(chan);
          assertNotNull(ifd);
          assertFalse(ifd.hasNextIFD());
          assertTrue(ifd.isSingleStrip(chan));
