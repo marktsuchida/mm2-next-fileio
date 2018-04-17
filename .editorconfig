@@ -1,0 +1,32 @@
+# http://editorconfig.org
+
+root = true
+
+[*]
+# end_of_line = <let Git handle it>
+indent_style = space
+indent_size = 3
+trim_trailing_whitespace = true
+insert_final_newline = true
+charset = utf-8
+
+[*.clj]
+indent_size = 2
+
+[*.py]
+# PEP-8
+indent_size = 4
+
+[Makefile.am]
+indent_style = tab
+tab_width = 8
+
+[*.sln]
+end_of_line = crlf
+indent_style = tab
+tab_width = 4
+
+[*.{vcxproj,vcxproj.filters}]
+end_of_line = crlf
+charset = utf-8-bom
+indent_size = 2
