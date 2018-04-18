@@ -3,7 +3,10 @@ package org.micromanager.data.internal.io.mmtiff;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.SeekableByteChannel;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 public class TiffHeader {
    private static final int HEADER_SIZE = 8;
@@ -20,17 +23,29 @@ public class TiffHeader {
       ByteBuffer b = ByteBuffer.allocateDirect(HEADER_SIZE);
       chan.position(0).read(b);
       b.rewind();
-      try {
-         ByteOrder byteOrder = readByteOrder(b);
-         b.order(byteOrder);
-         short magic = readMagic(b);
-         long firstIFDOffset = readIFDOffset(b);
-         return new TiffHeader(byteOrder, magic, firstIFDOffset);
-      }
-      catch (TiffFormatException e) {
-         throw new TiffFormatException(
-            "Does not appear to be a valid TIFF file", e);
-      }
+      ByteOrder byteOrder = readByteOrder(b);
+      b.order(byteOrder);
+      short magic = readMagic(b);
+      long firstIFDOffset = readIFDOffset(b);
+      return new TiffHeader(byteOrder, magic, firstIFDOffset);
+   }
+
+   public static CompletionStage<TiffHeader> read(AsynchronousFileChannel chan) {
+      ByteBuffer b = ByteBuffer.allocateDirect(HEADER_SIZE);
+      return Async.read(chan, b, 0).thenComposeAsync(i -> {
+         b.rewind();
+         try {
+            ByteOrder byteOrder = readByteOrder(b);
+            b.order(byteOrder);
+            short magic = readMagic(b);
+            long firstIFDOffset = readIFDOffset(b);
+            return CompletableFuture.completedFuture(
+               new TiffHeader(byteOrder, magic, firstIFDOffset));
+         }
+         catch (IOException e) {
+            return Async.completedExceptionally(e);
+         }
+      });
    }
 
    private static ByteOrder readByteOrder(ByteBuffer b) throws TiffFormatException {
@@ -86,5 +101,9 @@ public class TiffHeader {
    public TiffIFD readFirstIFD(SeekableByteChannel chan) throws IOException {
       chan.position(firstIFDOffset_);
       return TiffIFD.read(chan, byteOrder_);
+   }
+
+   public CompletionStage<TiffIFD> readFirstIFD(AsynchronousFileChannel chan) {
+      return TiffIFD.read(chan, byteOrder_, firstIFDOffset_);
    }
 }

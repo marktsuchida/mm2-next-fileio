@@ -10,10 +10,12 @@ import org.micromanager.testing.TemporaryDirectory;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.concurrent.ExecutionException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -36,14 +38,17 @@ public class TiffHeaderTest {
    public void testEmptyFile() throws IOException {
       Path tif = tempPath_.resolve("empty.tif");
       Files.createFile(tif);
-      try (FileChannel chan = FileChannel.open(tif, StandardOpenOption.READ)) {
-         assertThrows(TiffFormatException.class, () -> TiffHeader.read(chan));
+      try (AsynchronousFileChannel chan = AsynchronousFileChannel.open(tif,
+         StandardOpenOption.READ)) {
+         Throwable ee = assertThrows(ExecutionException.class,
+            () -> TiffHeader.read(chan).toCompletableFuture().get());
+         assertTrue(ee.getCause() instanceof TiffFormatException);
       }
    }
 
    @ParameterizedTest
    @ValueSource(strings = { "MM", "II" })
-   public void testMinimalLittleEndian(String byteOrder) throws IOException {
+   public void testMinimalLittleEndian(String byteOrder) throws Exception {
       ByteBuffer b = ByteBuffer.allocate(1024).order(byteOrder.equals("MM") ?
          ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN);
 
@@ -130,17 +135,18 @@ public class TiffHeaderTest {
          System.out.printf("%d bytes written to %s\n", size, tif.toString());
       }
 
-      try (FileChannel chan = FileChannel.open(tif, StandardOpenOption.READ)) {
-         TiffHeader header = TiffHeader.read(chan);
+      try (AsynchronousFileChannel chan = AsynchronousFileChannel.open(tif,
+         StandardOpenOption.READ)) {
+         TiffHeader header = TiffHeader.read(chan).toCompletableFuture().get();
          assertEquals(42, header.getTiffMagic());
          assertEquals(byteOrder.equals("MM") ?
             ByteOrder.BIG_ENDIAN: ByteOrder.LITTLE_ENDIAN,
             header.getTiffByteOrder());
-         TiffIFD ifd = header.readFirstIFD(chan);
+         TiffIFD ifd = header.readFirstIFD(chan).toCompletableFuture().get();
          assertNotNull(ifd);
          assertFalse(ifd.hasNextIFD());
-         assertTrue(ifd.isSingleStrip(chan));
-         ByteBuffer pixels = ifd.readPixels(chan);
+         assertTrue(ifd.isSingleStrip(chan).toCompletableFuture().get());
+         ByteBuffer pixels = ifd.readPixels(chan).toCompletableFuture().get();
          assertEquals(8 * 4, pixels.limit());
       }
    }

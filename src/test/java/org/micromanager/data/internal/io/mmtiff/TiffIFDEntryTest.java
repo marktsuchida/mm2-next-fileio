@@ -2,8 +2,9 @@ package org.micromanager.data.internal.io.mmtiff;
 
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TiffIFDEntryTest {
    @Test
-   public void testImmediate() throws IOException {
+   public void testImmediate() throws Exception {
       ByteBuffer b = ByteBuffer.wrap(new byte[] {
          0x66, 0x77,
          0x00, 0x01,
@@ -24,7 +25,7 @@ public class TiffIFDEntryTest {
       assertEquals(0x6677, e.getTag().getTiffConstant());
       assertEquals(TiffFieldType.BYTE, e.getType());
       assertEquals(4, e.getCount());
-      TiffValue v = e.readValue(null);
+      TiffValue v = e.readValue(null, null).toCompletableFuture().get();
       assertEquals(0x11, v.intValue(0));
       assertEquals(0x22, v.intValue(1));
       assertEquals(0x33, v.intValue(2));
@@ -32,29 +33,31 @@ public class TiffIFDEntryTest {
    }
 
    @Test
-   public void testPointer() throws IOException {
+   public void testPointer() throws Exception {
       ByteBuffer b = ByteBuffer.wrap(new byte[] {
          0x00, 0x00,
          0x00, 0x01,
          0x00, 0x00, 0x00, 0x05,
          0x00, 0x00, 0x00, 0x04,
       });
-      TiffIFDEntry e = TiffIFDEntry.read(b);
-      assertEquals(TiffFieldType.BYTE, e.getType());
-      assertEquals(5, e.getCount());
+      TiffIFDEntry entry = TiffIFDEntry.read(b);
+      assertEquals(TiffFieldType.BYTE, entry.getType());
+      assertEquals(5, entry.getCount());
 
       Path tmpFile = Files.createTempFile(getClass().getSimpleName(), null);
       try (FileChannel chan = FileChannel.open(tmpFile,
-         StandardOpenOption.READ, StandardOpenOption.WRITE,
-         StandardOpenOption.TRUNCATE_EXISTING)) {
-         chan.write(ByteBuffer.wrap(new byte[] {
+         StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)) {
+         chan.write(ByteBuffer.wrap(new byte[]{
             0x00, 0x00, 0x00, 0x00,
             0x11, 0x22, 0x33, 0x44,
             0x55,
          }));
+      }
 
-         chan.position(0);
-         TiffValue v = e.readValue(chan);
+      try (AsynchronousFileChannel chan = AsynchronousFileChannel.open(tmpFile,
+         StandardOpenOption.READ)) {
+         TiffValue v = entry.readValue(chan, ByteOrder.BIG_ENDIAN).
+            toCompletableFuture().get();
          assertEquals(0x11, v.intValue(0));
          assertEquals(0x22, v.intValue(1));
          assertEquals(0x33, v.intValue(2));

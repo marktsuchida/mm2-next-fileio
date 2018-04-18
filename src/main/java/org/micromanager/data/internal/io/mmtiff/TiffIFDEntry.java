@@ -4,8 +4,9 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.channels.SeekableByteChannel;
-import java.util.stream.Collectors;
+import java.nio.channels.AsynchronousFileChannel;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 public abstract class TiffIFDEntry {
    protected final ByteOrder byteOrder_;
@@ -64,7 +65,8 @@ public abstract class TiffIFDEntry {
       return count_;
    }
 
-   public abstract TiffValue readValue(SeekableByteChannel channel) throws IOException;
+   public abstract CompletionStage<TiffValue> readValue(
+      AsynchronousFileChannel chan, ByteOrder order);
 
    //
    //
@@ -83,8 +85,9 @@ public abstract class TiffIFDEntry {
       }
 
       @Override
-      public TiffValue readValue(SeekableByteChannel channel) {
-         return getValue();
+      public CompletionStage<TiffValue> readValue(
+         AsynchronousFileChannel chan, ByteOrder order) {
+         return CompletableFuture.completedFuture(getValue());
       }
    }
 
@@ -96,13 +99,25 @@ public abstract class TiffIFDEntry {
          offset_ = offset;
       }
 
+      private int dataSize() {
+         return getType().getElementSize() * getCount();
+      }
+
       @Override
-      public TiffValue readValue(SeekableByteChannel channel) throws IOException {
-         ByteBuffer b = ByteBuffer.allocateDirect(
-            getType().getElementSize() * getCount()).order(byteOrder_);
-         channel.position(offset_).read(b);
-         b.rewind();
-         return TiffValue.read(getType(), getCount(), b);
+      public CompletionStage<TiffValue> readValue(
+         AsynchronousFileChannel chan, ByteOrder order) {
+         ByteBuffer b = ByteBuffer.allocateDirect(dataSize()).order(byteOrder_);
+         return Async.read(chan, b, offset_).
+            thenComposeAsync(i -> {
+               b.rewind();
+               try {
+                  return CompletableFuture.completedFuture(
+                     TiffValue.read(getType(), getCount(), b));
+               }
+               catch (IOException e) {
+                  return Async.completedExceptionally(e);
+               }
+            });
       }
    }
 }

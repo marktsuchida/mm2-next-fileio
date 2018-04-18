@@ -7,10 +7,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.io.EOFException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.ShortBuffer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TiffValueTest {
    @Test
