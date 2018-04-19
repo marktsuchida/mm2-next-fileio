@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TiffIFDEntryTest {
    @Test
-   public void testImmediate() throws Exception {
+   public void testReadImmediate() throws Exception {
       ByteBuffer b = ByteBuffer.wrap(new byte[] {
          0x66, 0x77,
          0x00, 0x01,
@@ -33,7 +33,7 @@ public class TiffIFDEntryTest {
    }
 
    @Test
-   public void testPointer() throws Exception {
+   public void testReadPointer() throws Exception {
       ByteBuffer b = ByteBuffer.wrap(new byte[] {
          0x00, 0x00,
          0x00, 0x01,

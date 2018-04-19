@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TiffValueTest {
    @Test
-   public void testUndefined() throws EOFException {
+   public void testReadUndefined() throws EOFException {
       ByteBuffer b = ByteBuffer.allocate(5);
       TiffValue v = TiffValue.read(TiffFieldType.UNDEFINED, 5, b);
       assertEquals(TiffFieldType.UNDEFINED, v.getTiffType());
@@ -20,7 +20,7 @@ public class TiffValueTest {
    }
 
    @Test
-   public void testBytes() throws EOFException {
+   public void testReadBytes() throws EOFException {
       ByteBuffer b = ByteBuffer.wrap(new byte[] { 0, 1, 127, (byte) 128, (byte) 255 });
       TiffValue v = TiffValue.read(TiffFieldType.BYTE, 5, b);
       assertEquals(TiffFieldType.BYTE, v.getTiffType());
@@ -45,7 +45,7 @@ public class TiffValueTest {
    }
 
    @Test
-   public void testAscii() throws Exception {
+   public void testReadAscii() throws Exception {
       byte[] encoded = "\u00B5Manager".getBytes("UTF-8");
 
       // Not null-terminated
@@ -66,7 +66,7 @@ public class TiffValueTest {
 
    @ParameterizedTest
    @ValueSource(ints = { 0, 1 })
-   public void testShorts(int o) throws EOFException {
+   public void testReadShorts(int o) throws EOFException {
       ByteOrder order = o != 0 ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN;
       ByteBuffer b = ByteBuffer.allocate(8).order(order);
       b.asShortBuffer().put(new short[] { 0, 32767, (short) 32768, (short) 65535 });
@@ -94,7 +94,7 @@ public class TiffValueTest {
 
    @ParameterizedTest
    @ValueSource(ints = { 0, 1 })
-   public void testLongs(int o) throws EOFException {
+   public void testReadLongs(int o) throws EOFException {
       ByteOrder order = o != 0 ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN;
       ByteBuffer b = ByteBuffer.allocate(16).order(order);
       b.asIntBuffer().put(new int[] {
@@ -126,7 +126,7 @@ public class TiffValueTest {
    }
 
    @Test
-   public void testRationals() throws EOFException {
+   public void testReadRationals() throws EOFException {
       ByteBuffer b = ByteBuffer.allocate(8);
       b.asIntBuffer().put(new int[] { 1, 2 });
       b.rewind();

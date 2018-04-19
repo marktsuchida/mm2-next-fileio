@@ -35,7 +35,7 @@ public class TiffHeaderTest {
    }
 
    @Test
-   public void testEmptyFile() throws IOException {
+   public void testReadEmptyFile() throws IOException {
       Path tif = tempPath_.resolve("empty.tif");
       Files.createFile(tif);
       try (AsynchronousFileChannel chan = AsynchronousFileChannel.open(tif,
@@ -48,7 +48,7 @@ public class TiffHeaderTest {
 
    @ParameterizedTest
    @ValueSource(strings = { "MM", "II" })
-   public void testMinimalLittleEndian(String byteOrder) throws Exception {
+   public void testReadMinimalExample(String byteOrder) throws Exception {
       ByteBuffer b = ByteBuffer.allocate(1024).order(byteOrder.equals("MM") ?
          ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN);
 
