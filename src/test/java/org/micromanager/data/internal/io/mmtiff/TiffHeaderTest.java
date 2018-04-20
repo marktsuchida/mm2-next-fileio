@@ -42,7 +42,7 @@ public class TiffHeaderTest {
          StandardOpenOption.READ)) {
          Throwable ee = assertThrows(ExecutionException.class,
             () -> TiffHeader.read(chan).toCompletableFuture().get());
-         assertTrue(ee.getCause() instanceof TiffFormatException);
+         assertTrue(ee.getCause() instanceof IOException);
       }
    }
 

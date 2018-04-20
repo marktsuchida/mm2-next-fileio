@@ -19,8 +19,8 @@ public class TiffHeader {
    //
 
    public static CompletionStage<TiffHeader> read(AsynchronousFileChannel chan) {
-      ByteBuffer b = ByteBuffer.allocateDirect(HEADER_SIZE);
-      return Async.read(chan, b, 0).thenComposeAsync(i -> {
+      ByteBuffer buffer = ByteBuffer.allocateDirect(HEADER_SIZE);
+      return Async.read(chan, buffer, 0).thenComposeAsync(b -> {
          b.rewind();
          try {
             ByteOrder byteOrder = readByteOrder(b);

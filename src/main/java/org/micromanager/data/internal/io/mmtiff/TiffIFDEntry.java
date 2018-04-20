@@ -106,9 +106,9 @@ public abstract class TiffIFDEntry {
       @Override
       public CompletionStage<TiffValue> readValue(
          AsynchronousFileChannel chan, ByteOrder order) {
-         ByteBuffer b = ByteBuffer.allocateDirect(dataSize()).order(byteOrder_);
-         return Async.read(chan, b, offset_).
-            thenComposeAsync(i -> {
+         ByteBuffer buffer = ByteBuffer.allocateDirect(dataSize()).order(byteOrder_);
+         return Async.read(chan, buffer, offset_).
+            thenComposeAsync(b -> {
                b.rewind();
                try {
                   return CompletableFuture.completedFuture(

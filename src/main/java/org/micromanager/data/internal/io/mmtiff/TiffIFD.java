@@ -28,19 +28,19 @@ public class TiffIFD {
    //
 
    public static CompletionStage<TiffIFD> read(AsynchronousFileChannel chan, ByteOrder order, long offset) {
-      ByteBuffer entryCountBuffer = ByteBuffer.allocate(ENTRY_COUNT_SIZE).order(order);
-      return Async.read(chan, entryCountBuffer, offset).
-         thenComposeAsync(i1 -> {
-            entryCountBuffer.rewind();
-            int entryCount = Unsigned.from(entryCountBuffer.getShort());
+      ByteBuffer countBuffer = ByteBuffer.allocate(ENTRY_COUNT_SIZE).order(order);
+      return Async.read(chan, countBuffer, offset).
+         thenComposeAsync(cb -> {
+            cb.rewind();
+            int entryCount = Unsigned.from(cb.getShort());
             int remainingSize = entryCount * ENTRY_SIZE + NEXT_IFD_OFFSET_SIZE;
-            ByteBuffer b = ByteBuffer.allocateDirect(remainingSize).order(order);
-            return Async.read(chan, b, offset + 2).
-               thenComposeAsync(i2 -> {
-                  b.rewind();
+            ByteBuffer bodyBuffer = ByteBuffer.allocateDirect(remainingSize).order(order);
+            return Async.read(chan, bodyBuffer, offset + ENTRY_COUNT_SIZE).
+               thenComposeAsync(bb -> {
+                  bb.rewind();
                   try {
                      return CompletableFuture.completedFuture(
-                        readEntriesAndNextOffset(b, entryCount));
+                        readEntriesAndNextOffset(bb, entryCount));
                   }
                   catch (IOException e) {
                      return Async.completedExceptionally(e);
@@ -167,6 +167,6 @@ public class TiffIFD {
    private CompletionStage<ByteBuffer> readBlock(AsynchronousFileChannel chan,
                                                  long offset, long size) {
       ByteBuffer buffer = ByteBuffer.allocateDirect((int) size);
-      return Async.read(chan, buffer, offset).thenApply(i -> buffer);
+      return Async.read(chan, buffer, offset);
    }
 }
