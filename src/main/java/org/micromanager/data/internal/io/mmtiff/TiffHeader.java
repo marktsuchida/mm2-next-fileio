@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.AsynchronousFileChannel;
-import java.nio.channels.SeekableByteChannel;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
@@ -18,17 +17,6 @@ public class TiffHeader {
    //
    //
    //
-
-   public static TiffHeader read(SeekableByteChannel chan) throws IOException {
-      ByteBuffer b = ByteBuffer.allocateDirect(HEADER_SIZE);
-      chan.position(0).read(b);
-      b.rewind();
-      ByteOrder byteOrder = readByteOrder(b);
-      b.order(byteOrder);
-      short magic = readMagic(b);
-      long firstIFDOffset = readIFDOffset(b);
-      return new TiffHeader(byteOrder, magic, firstIFDOffset);
-   }
 
    public static CompletionStage<TiffHeader> read(AsynchronousFileChannel chan) {
       ByteBuffer b = ByteBuffer.allocateDirect(HEADER_SIZE);
@@ -96,11 +84,6 @@ public class TiffHeader {
 
    public short getTiffMagic() {
       return magic_;
-   }
-
-   public TiffIFD readFirstIFD(SeekableByteChannel chan) throws IOException {
-      chan.position(firstIFDOffset_);
-      return TiffIFD.read(chan, byteOrder_);
    }
 
    public CompletionStage<TiffIFD> readFirstIFD(AsynchronousFileChannel chan) {

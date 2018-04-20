@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.AsynchronousFileChannel;
-import java.nio.channels.SeekableByteChannel;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -27,20 +26,6 @@ public class TiffIFD {
    //
    //
    //
-
-   public static TiffIFD read(SeekableByteChannel chan, ByteOrder order) throws IOException {
-      ByteBuffer entryCountBuffer = ByteBuffer.allocate(ENTRY_COUNT_SIZE).order(order);
-      chan.read(entryCountBuffer);
-      entryCountBuffer.rewind();
-      int entryCount = Unsigned.from(entryCountBuffer.getShort());
-
-      int remainingSize = entryCount * ENTRY_SIZE + NEXT_IFD_OFFSET_SIZE;
-
-      ByteBuffer b = ByteBuffer.allocateDirect(remainingSize).order(order);
-      chan.read(b);
-      b.rewind();
-      return readEntriesAndNextOffset(b, entryCount);
-   }
 
    public static CompletionStage<TiffIFD> read(AsynchronousFileChannel chan, ByteOrder order, long offset) {
       ByteBuffer entryCountBuffer = ByteBuffer.allocate(ENTRY_COUNT_SIZE).order(order);
@@ -128,14 +113,6 @@ public class TiffIFD {
 
    public boolean hasNextIFD() {
       return nextIFDOffset_ != 0;
-   }
-
-   public TiffIFD readNextIFD(SeekableByteChannel chan) throws IOException {
-      if (!hasNextIFD()) {
-         throw new EOFException();
-      }
-      chan.position(nextIFDOffset_);
-      return TiffIFD.read(chan, byteOrder_);
    }
 
    public CompletionStage<TiffIFD> readNextIFD(AsynchronousFileChannel chan) throws IOException {
