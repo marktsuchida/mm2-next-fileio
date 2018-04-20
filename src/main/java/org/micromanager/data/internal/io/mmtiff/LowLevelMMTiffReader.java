@@ -1,9 +1,9 @@
 package org.micromanager.data.internal.io.mmtiff;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.channels.SeekableByteChannel;
+import java.nio.channels.AsynchronousFileChannel;
+import java.util.concurrent.CompletionStage;
 
 /**
  * A TIFF reader that also reads MM-specific data.
@@ -21,68 +21,74 @@ public class LowLevelMMTiffReader {
       byteOrder_ = order;
    }
 
-   public int[] readRawIndexMap(SeekableByteChannel chan) throws IOException {
-      ByteBuffer b = readMMBlockPointer(chan, 8, 0x0343C790, 0x0034b2b7, 20);
-      int[] ret = new int[b.capacity() / 4];
-      b.asIntBuffer().get(ret);
-      return ret;
+   public CompletionStage<int[]> readRawIndexMap(AsynchronousFileChannel chan) {
+      return readMMBlockPointer(chan, 8, 0x0343C790, 0x0034b2b7, 20).
+         thenApply(buffer -> {
+            int[] ret = new int[buffer.capacity() / 4];
+            buffer.asIntBuffer().get(ret);
+            return ret;
+         });
    }
 
-   public byte[] readRawDisplaySettings(SeekableByteChannel chan) throws IOException {
-      return bytesFromByteBuffer(readMMBlockPointer(chan, 16, 0x1CD5AE84, 0x14BB8964, 1));
+   public CompletionStage<byte[]> readRawDisplaySettings(AsynchronousFileChannel chan) {
+      return readMMBlockPointer(chan, 16, 0x1CD5AE84, 0x14BB8964, 1).
+         thenApply(b -> b.array());
    }
 
-   public byte[] readRawComments(SeekableByteChannel chan) throws IOException {
-      return bytesFromByteBuffer(readMMBlockPointer(chan, 24, 0x05EC7D92, 0x050CBB65, 1));
+   public CompletionStage<byte[]> readRawComments(AsynchronousFileChannel chan) {
+      return readMMBlockPointer(chan, 24, 0x05EC7D92, 0x050CBB65, 1).
+         thenApply(b -> b.array());
    }
 
-   public byte[] readRawSummaryMetadata(SeekableByteChannel chan) throws IOException {
-      return bytesFromByteBuffer(readMMBlock(chan, 32, 0x0023F124, 1));
-   }
-
-   //
-   //
-   //
-
-   private ByteBuffer readMMBlockPointer(SeekableByteChannel chan,
-      long pointerOffset, int pointerMagic, int blockMagic, int entrySize)
-      throws IOException {
-      ByteBuffer offsetBuffer = ByteBuffer.allocateDirect(8).order(byteOrder_);
-      chan.position(pointerOffset);
-      chan.read(offsetBuffer);
-      if (offsetBuffer.getInt() != pointerMagic) {
-         throw new TiffFormatException("Incorrect MM block pointer magic");
-      }
-      long offset = Unsigned.from(offsetBuffer.getInt());
-      return readMMBlock(chan, offset, blockMagic, entrySize);
-   }
-
-   private ByteBuffer readMMBlock(SeekableByteChannel chan,
-      long offset, long blockMagic, int entrySize) throws IOException {
-      ByteBuffer blockHeaderBuffer = ByteBuffer.allocateDirect(8).order(byteOrder_);
-      chan.position(offset);
-      chan.read(blockHeaderBuffer);
-      if (blockHeaderBuffer.getInt() != blockMagic) {
-         throw new TiffFormatException("Incorrect MM block magic");
-      }
-      long length = Unsigned.from(blockHeaderBuffer.getInt());
-
-      ByteBuffer result = ByteBuffer.allocateDirect((int) length * entrySize).
-         order(byteOrder_);
-      chan.read(result);
-      return result;
+   public CompletionStage<byte[]> readRawSummaryMetadata(AsynchronousFileChannel chan) {
+      return readMMBlock(chan, 32, 0x0023F124, 1).
+         thenApply(b -> b.array());
    }
 
    //
    //
    //
 
-   byte[] bytesFromByteBuffer(ByteBuffer b) {
-      if (b.hasArray()) {
-         return b.array();
-      }
-      byte[] ret = new byte[b.capacity()];
-      b.get(ret);
-      return ret;
+   private CompletionStage<ByteBuffer> readMMBlockPointer(AsynchronousFileChannel chan,
+                                                          long pointerOffset,
+                                                          int pointerMagic,
+                                                          int blockMagic,
+                                                          int entrySize) {
+      final int pointerSize = 8;
+      ByteBuffer offsetBuffer = ByteBuffer.allocate(pointerSize).order(byteOrder_);
+      return Async.read(chan, offsetBuffer, pointerOffset).
+         thenComposeAsync(buffer -> {
+            int observedPointerMagic = buffer.getInt();
+            if (observedPointerMagic != pointerMagic) {
+               return Async.completedExceptionally(new TiffFormatException(
+                  String.format(
+                     "Incorrect MM block pointer magic (expected 0x%08X; found 0x%08X)",
+                     pointerMagic, observedPointerMagic)));
+            }
+            long blockOffset = Unsigned.from(buffer.getInt());
+            return readMMBlock(chan, blockOffset, blockMagic, entrySize);
+         });
+   }
+
+   private CompletionStage<ByteBuffer> readMMBlock(AsynchronousFileChannel chan,
+                                                   long offset,
+                                                   long blockMagic,
+                                                   int entrySize) {
+      final int headerSize = 8;
+      ByteBuffer blockHeaderBuffer = ByteBuffer.allocate(headerSize).order(byteOrder_);
+      return Async.read(chan, blockHeaderBuffer, offset).
+         thenComposeAsync(buffer -> {
+            int observedBlockMagic = buffer.getInt();
+            if (observedBlockMagic != blockMagic) {
+               return Async.completedExceptionally(new TiffFormatException(
+                  String.format(
+                     "Incorrect MM block magic (expected 0x%08X; found 0x%08X)",
+                     blockMagic, observedBlockMagic)));
+            }
+            long length = Unsigned.from(buffer.getInt());
+            ByteBuffer resultBuffer = ByteBuffer.allocate(
+               (int) length * entrySize).order(byteOrder_);
+            return Async.read(chan, resultBuffer, offset + headerSize);
+         });
    }
 }
