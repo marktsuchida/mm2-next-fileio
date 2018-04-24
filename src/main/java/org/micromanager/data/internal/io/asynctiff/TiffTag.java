@@ -1,4 +1,4 @@
-package org.micromanager.data.internal.io.mmtiff;
+package org.micromanager.data.internal.io.asynctiff;
 
 import com.google.common.collect.ImmutableList;
 import org.micromanager.data.internal.io.Unsigned;
@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static org.micromanager.data.internal.io.mmtiff.TiffFieldType.*;
+import static org.micromanager.data.internal.io.asynctiff.TiffFieldType.*;
 
 public abstract class TiffTag {
    public static TiffTag fromTiffConstant(int value) {

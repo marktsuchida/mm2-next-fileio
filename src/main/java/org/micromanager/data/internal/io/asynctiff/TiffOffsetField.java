@@ -1,4 +1,4 @@
-package org.micromanager.data.internal.io.mmtiff;
+package org.micromanager.data.internal.io.asynctiff;
 
 import com.google.common.base.Preconditions;
 import org.micromanager.data.internal.io.Async;

@@ -1,4 +1,4 @@
-package org.micromanager.data.internal.io.mmtiff;
+package org.micromanager.data.internal.io.asynctiff;
 
 import org.micromanager.data.internal.io.Async;
 import org.micromanager.data.internal.io.BufferedPositionGroup;

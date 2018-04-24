@@ -1,10 +1,8 @@
-package org.micromanager.data.internal.io.mmtiff;
+package org.micromanager.data.internal.io.asynctiff;
 
 import org.micromanager.data.internal.io.Alignment;
 import org.micromanager.data.internal.io.Async;
-import org.micromanager.data.internal.io.BufferedPosition;
 import org.micromanager.data.internal.io.BufferedPositionGroup;
-import org.micromanager.data.internal.io.FilePosition;
 import org.micromanager.data.internal.io.UnbufferedPosition;
 import org.micromanager.data.internal.io.Unsigned;
 

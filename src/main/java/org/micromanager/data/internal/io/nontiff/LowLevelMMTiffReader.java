@@ -1,8 +1,9 @@
-package org.micromanager.data.internal.io.mmtiff;
+package org.micromanager.data.internal.io.nontiff;
 
 import org.micromanager.data.internal.io.Async;
 import org.micromanager.data.internal.io.Unsigned;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.AsynchronousFileChannel;
@@ -63,7 +64,7 @@ public class LowLevelMMTiffReader {
          thenComposeAsync(buffer -> {
             int observedPointerMagic = buffer.getInt();
             if (observedPointerMagic != pointerMagic) {
-               return Async.completedExceptionally(new TiffFormatException(
+               return Async.completedExceptionally(new IOException(
                   String.format(
                      "Incorrect MM block pointer magic (expected 0x%08X; found 0x%08X)",
                      pointerMagic, observedPointerMagic)));
@@ -83,7 +84,7 @@ public class LowLevelMMTiffReader {
          thenComposeAsync(buffer -> {
             int observedBlockMagic = buffer.getInt();
             if (observedBlockMagic != blockMagic) {
-               return Async.completedExceptionally(new TiffFormatException(
+               return Async.completedExceptionally(new IOException(
                   String.format(
                      "Incorrect MM block magic (expected 0x%08X; found 0x%08X)",
                      blockMagic, observedBlockMagic)));
