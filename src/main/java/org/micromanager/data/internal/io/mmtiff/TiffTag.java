@@ -1,6 +1,7 @@
 package org.micromanager.data.internal.io.mmtiff;
 
 import com.google.common.collect.ImmutableList;
+import org.micromanager.data.internal.io.Unsigned;
 
 import java.util.HashMap;
 import java.util.List;
@@ -10,8 +11,6 @@ import java.util.stream.Collectors;
 import static org.micromanager.data.internal.io.mmtiff.TiffFieldType.*;
 
 public abstract class TiffTag {
-   private final short tiffConstant_;
-
    public static TiffTag fromTiffConstant(int value) {
       Known knownTag = Known.fromTiffConstant(value);
       if (knownTag == null) {
@@ -20,14 +19,9 @@ public abstract class TiffTag {
       return knownTag.get();
    }
 
-   private TiffTag(int value) {
-      tiffConstant_ = (short) value;
-   }
+   private TiffTag() {}
 
-   public int getTiffConstant() {
-      return Unsigned.from(tiffConstant_);
-   }
-
+   public abstract int getTiffConstant();
    public abstract String name();
    public abstract void checkType(TiffFieldType type) throws TiffFormatException;
 
@@ -36,8 +30,15 @@ public abstract class TiffTag {
    //
 
    private static class UnknownTag extends TiffTag {
+      private final short tiffConstant_;
+
       private UnknownTag(int value) {
-         super(value);
+         tiffConstant_ = (short) value;
+      }
+
+      @Override
+      public int getTiffConstant() {
+         return Unsigned.from(tiffConstant_);
       }
 
       @Override
@@ -55,8 +56,12 @@ public abstract class TiffTag {
       private final Known known_;
 
       private KnownTag(Known known) {
-         super(known.getTiffConstant());
          known_ = known;
+      }
+
+      @Override
+      public int getTiffConstant() {
+         return known_.getTiffConstant();
       }
 
       @Override

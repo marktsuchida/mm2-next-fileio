@@ -1,5 +1,8 @@
 package org.micromanager.data.internal.io.mmtiff;
 
+import org.micromanager.data.internal.io.Async;
+import org.micromanager.data.internal.io.Unsigned;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.AsynchronousFileChannel;

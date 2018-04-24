@@ -1,5 +1,7 @@
 package org.micromanager.data.internal.io.mmtiff;
 
+import org.micromanager.data.internal.io.Unsigned;
+
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;

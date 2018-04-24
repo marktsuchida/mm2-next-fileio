@@ -1,6 +1,7 @@
-package org.micromanager.data.internal.io.mmtiff;
+package org.micromanager.data.internal.io;
 
 import java.io.EOFException;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.CompletionHandler;
@@ -78,6 +79,35 @@ public class Async {
             }
          });
       return future;
+   }
+
+   /**
+    * Determine the current file size.
+    * @param chan the asynchronous file channel
+    * @return a completion stage bearing the file size
+    */
+   public static CompletionStage<Long> size(AsynchronousFileChannel chan) {
+      try {
+         return CompletableFuture.completedFuture(chan.size());
+      }
+      catch (IOException e) {
+         return completedExceptionally(e);
+      }
+   }
+
+   /**
+    * Pad the file size to be a multiple of the given alignment size.
+    *
+    * @param chan the asynchronous file channel
+    * @param alignment the alignment size, which must be a power of 2
+    * @return a completion stage for the pending write
+    */
+   public static CompletionStage<Void> pad(AsynchronousFileChannel chan,
+                                           int alignment) {
+      return size(chan).thenCompose(start -> {
+         long bytes = Alignment.align(start, alignment) - start;
+         return write(chan, ByteBuffer.allocate((int) bytes), start);
+      });
    }
 
    /**

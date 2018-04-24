@@ -1,4 +1,4 @@
-package org.micromanager.data.internal.io.mmtiff;
+package org.micromanager.data.internal.io;
 
 public final class Unsigned {
    public static int from(byte u) {

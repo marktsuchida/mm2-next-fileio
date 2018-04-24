@@ -1,6 +1,7 @@
-package org.micromanager.data.internal.io.mmtiff;
+package org.micromanager.data.internal.io;
 
 import org.junit.jupiter.api.Test;
+import org.micromanager.data.internal.io.Unsigned;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

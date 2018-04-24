@@ -1,5 +1,10 @@
 package org.micromanager.data.internal.io.mmtiff;
 
+import org.micromanager.data.internal.io.Async;
+import org.micromanager.data.internal.io.BufferedPositionGroup;
+import org.micromanager.data.internal.io.UnbufferedPosition;
+import org.micromanager.data.internal.io.Unsigned;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -9,10 +14,13 @@ import java.util.concurrent.CompletionStage;
 
 public class TiffHeader {
    private static final int HEADER_SIZE = 8;
+   private static final short BIG_ENDIAN_MARK = 0x4D4D; // 'MM'
+   private static final short LITTLE_ENDIAN_MARK = 0x4949; // 'II'
+   private static final short TIFF_MAGIC = 42;
 
    private ByteOrder byteOrder_;
    private short magic_;
-   private long firstIFDOffset_;
+   private TiffOffsetField firstIFDOffset_;
 
    //
    //
@@ -36,12 +44,35 @@ public class TiffHeader {
       });
    }
 
+   public static TiffHeader createForWrite(ByteOrder order, TiffOffsetField firstIFDOffsetField) {
+      return new TiffHeader(order, firstIFDOffsetField);
+   }
+
+   // Read
+   private TiffHeader(ByteOrder order, short magic, long firstIFDOffset) {
+      byteOrder_ = order;
+      magic_ = magic;
+      firstIFDOffset_ = TiffOffsetField.forOffsetValue(UnbufferedPosition.at(firstIFDOffset),
+         "Read-only FirstIFDOffset");
+   }
+
+   // Writing
+   private TiffHeader(ByteOrder order, TiffOffsetField firstIFDOffsetField) {
+      byteOrder_ = order;
+      magic_ = TIFF_MAGIC;
+      firstIFDOffset_ = firstIFDOffsetField;
+   }
+
+   //
+   //
+   //
+
    private static ByteOrder readByteOrder(ByteBuffer b) throws TiffFormatException {
       short byteOrder = b.getShort();
       switch (byteOrder) {
-         case 0x4949: // 'II'
+         case LITTLE_ENDIAN_MARK:
             return ByteOrder.LITTLE_ENDIAN;
-         case 0x4D4D: // 'MM'
+         case BIG_ENDIAN_MARK:
             return ByteOrder.BIG_ENDIAN;
          default:
             throw new TiffFormatException(String.format(
@@ -51,7 +82,7 @@ public class TiffHeader {
 
    private static short readMagic(ByteBuffer b) throws TiffFormatException {
       short magic = b.getShort();
-      if (magic != 42) {
+      if (magic != TIFF_MAGIC) {
          throw new TiffFormatException(String.format(
             "Incorrect TIFF header magic (expected 0x002A, got 0x%04X)", magic));
       }
@@ -68,12 +99,6 @@ public class TiffHeader {
       return ifdOffset;
    }
 
-   private TiffHeader(ByteOrder order, short magic, long firstIFDOffset) {
-      byteOrder_ = order;
-      magic_ = magic;
-      firstIFDOffset_ = firstIFDOffset;
-   }
-
    //
    //
    //
@@ -87,6 +112,24 @@ public class TiffHeader {
    }
 
    public CompletionStage<TiffIFD> readFirstIFD(AsynchronousFileChannel chan) {
-      return TiffIFD.read(chan, byteOrder_, firstIFDOffset_);
+      return TiffIFD.read(chan, byteOrder_, firstIFDOffset_.getOffsetValue().get());
+   }
+
+   //
+   //
+   //
+
+   public CompletionStage<Void> write(AsynchronousFileChannel chan) {
+      ByteBuffer buffer = ByteBuffer.allocate(HEADER_SIZE).order(byteOrder_);
+      write(buffer);
+      buffer.rewind();
+      return Async.write(chan, buffer, 0);
+   }
+
+   public void write(ByteBuffer dest) {
+      dest.putShort(byteOrder_.equals(ByteOrder.BIG_ENDIAN) ? BIG_ENDIAN_MARK : LITTLE_ENDIAN_MARK).
+         putShort(TIFF_MAGIC);
+      BufferedPositionGroup posGroup = BufferedPositionGroup.forBufferAt(0);
+      firstIFDOffset_.write(dest, posGroup);
    }
 }
