@@ -97,3 +97,8 @@ gradle-app.setting
 # IntelliJ IDEA
 /.idea/
 *.iml
+
+# Eclipse
+/.classpath
+/.project
+/.settings/
